@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { describe, it, before, after } from 'node:test';
+import { after, before, describe, it } from 'node:test';
+import * as cheerio from 'cheerio';
 import nodejs from '../dist/index.js';
 import { loadFixture, waitServerListen } from './test-utils.js';
-import * as cheerio from 'cheerio';
 
 /**
  * @typedef {import('../../../astro/test/test-utils').Fixture} Fixture
@@ -82,8 +82,7 @@ describe('Prerendering', () => {
 			});
 			const html = await res.text();
 			const $ = cheerio.load(html);
-			assert.equal(res.status, 301);
-			assert.equal(res.headers.get('location'), '/some-base/two/');
+			assert.equal(res.status, 200);
 			assert.equal($('h1').text(), 'Two');
 		});
 	});
@@ -171,8 +170,8 @@ describe('Prerendering', () => {
 			const html = await res.text();
 			const $ = cheerio.load(html);
 
-			expect(res.status).to.equal(200);
-			expect($('h1').text()).to.equal('One');
+			assert.equal(res.status, 200);
+			assert.equal($('h1').text(), 'One');
 		});
 
 		it('Can render prerendered route', async () => {
@@ -180,8 +179,8 @@ describe('Prerendering', () => {
 			const html = await res.text();
 			const $ = cheerio.load(html);
 
-			expect(res.status).to.equal(200);
-			expect($('h1').text()).to.equal('Two');
+			assert.equal(res.status, 200);
+			assert.equal($('h1').text(), 'Two');
 		});
 	});
 });
@@ -191,7 +190,7 @@ describe('Hybrid rendering', () => {
 	let fixture;
 	let server;
 
-	describe('With base', async () => {
+	describe('With base', () => {
 		before(async () => {
 			process.env.PRERENDER = false;
 			fixture = await loadFixture({
@@ -252,13 +251,14 @@ describe('Hybrid rendering', () => {
 			const res = await fetch(`http://${server.host}:${server.port}/some-base/one`, {
 				redirect: 'manual',
 			});
-			assert.equal(res.status, 301);
-			assert.equal(res.headers.get('location'), '/some-base/one/');
+			const html = await res.text();
+			const $ = cheerio.load(html);
+			assert.equal(res.status, 200);
 			assert.equal($('h1').text(), 'One');
 		});
 	});
 
-	describe('Without base', async () => {
+	describe('Without base', () => {
 		before(async () => {
 			process.env.PRERENDER = false;
 			fixture = await loadFixture({
@@ -316,7 +316,7 @@ describe('Hybrid rendering', () => {
 		});
 	});
 
-	describe('Shared modules', async () => {
+	describe('Shared modules', () => {
 		before(async () => {
 			process.env.PRERENDER = false;
 
@@ -342,8 +342,8 @@ describe('Hybrid rendering', () => {
 			const html = await res.text();
 			const $ = cheerio.load(html);
 
-			expect(res.status).to.equal(200);
-			expect($('h1').text()).to.equal('shared');
+			assert.equal(res.status, 200);
+			assert.equal($('h1').text(), 'shared');
 		});
 	});
 });

@@ -16,9 +16,11 @@ import { getOutFile, getOutFolder } from '../common.js';
 import { cssOrder, mergeInlineCss, type BuildInternals } from '../internal.js';
 import type { AstroBuildPlugin } from '../plugin.js';
 import type { StaticBuildOptions } from '../types.js';
+import { normalizeTheLocale } from '../../../i18n/index.js';
+import { toRoutingStrategy } from '../../../i18n/utils.js';
 
 const manifestReplace = '@@ASTRO_MANIFEST_REPLACE@@';
-const replaceExp = new RegExp(`['"](${manifestReplace})['"]`, 'g');
+const replaceExp = new RegExp(`['"]${manifestReplace}['"]`, 'g');
 
 export const SSR_MANIFEST_VIRTUAL_MODULE_ID = '@astrojs-manifest';
 export const RESOLVED_SSR_MANIFEST_VIRTUAL_MODULE_ID = '\0' + SSR_MANIFEST_VIRTUAL_MODULE_ID;
@@ -153,6 +155,7 @@ function buildManifest(
 	const { settings } = opts;
 
 	const routes: SerializedRouteInfo[] = [];
+	const domainLookupTable: Record<string, string> = {};
 	const entryModules = Object.fromEntries(internals.entrySpecifierToBundleMap.entries());
 	if (settings.scripts.some((script) => script.stage === 'page')) {
 		staticFiles.push(entryModules[PAGE_SCRIPT_ID]);
@@ -170,8 +173,8 @@ function buildManifest(
 		if (!route.prerender) continue;
 		if (!route.pathname) continue;
 
-		const outFolder = getOutFolder(opts.settings.config, route.pathname, route.type);
-		const outFile = getOutFile(opts.settings.config, outFolder, route.pathname, route.type);
+		const outFolder = getOutFolder(opts.settings.config, route.pathname, route);
+		const outFile = getOutFile(opts.settings.config, outFolder, route.pathname, route);
 		const file = outFile.toString().replace(opts.settings.config.build.client.toString(), '');
 		routes.push({
 			file,
@@ -229,6 +232,16 @@ function buildManifest(
 		});
 	}
 
+	/**
+	 * logic meant for i18n domain support, where we fill the lookup table
+	 */
+	const i18n = settings.config.i18n;
+	if (settings.config.experimental.i18nDomains && i18n && i18n.domains) {
+		for (const [locale, domainValue] of Object.entries(i18n.domains)) {
+			domainLookupTable[domainValue] = normalizeTheLocale(locale);
+		}
+	}
+
 	// HACK! Patch this special one.
 	if (!(BEFORE_HYDRATION_SCRIPT_ID in entryModules)) {
 		// Set this to an empty string so that the runtime knows not to try and load this.
@@ -238,9 +251,10 @@ function buildManifest(
 	if (settings.config.i18n) {
 		i18nManifest = {
 			fallback: settings.config.i18n.fallback,
-			routing: settings.config.i18n.routing,
+			strategy: toRoutingStrategy(settings.config.i18n),
 			locales: settings.config.i18n.locales,
 			defaultLocale: settings.config.i18n.defaultLocale,
+			domainLookupTable,
 		};
 	}
 

@@ -88,7 +88,7 @@ export const StaticClientAddressNotAvailable = {
  * @see
  * - [getStaticPaths()](https://docs.astro.build/en/reference/api-reference/#getstaticpaths)
  * @description
- * A [dynamic route](https://docs.astro.build/en/core-concepts/routing/#dynamic-routes) was matched, but no corresponding path was found for the requested parameters. This is often caused by a typo in either the generated or the requested path.
+ * A [dynamic route](https://docs.astro.build/en/guides/routing/#dynamic-routes) was matched, but no corresponding path was found for the requested parameters. This is often caused by a typo in either the generated or the requested path.
  */
 export const NoMatchingStaticPathFound = {
 	name: 'NoMatchingStaticPathFound',
@@ -148,7 +148,7 @@ export const MissingMediaQueryDirective = {
  * @docs
  * @message Unable to render `COMPONENT_NAME`. There are `RENDERER_COUNT` renderer(s) configured in your `astro.config.mjs` file, but none were able to server-side render `COMPONENT_NAME`.
  * @see
- * - [Frameworks components](https://docs.astro.build/en/core-concepts/framework-components/)
+ * - [Frameworks components](https://docs.astro.build/en/guides/framework-components/)
  * - [UI Frameworks](https://docs.astro.build/en/guides/integrations-guide/#official-integrations)
  * @description
  * None of the installed integrations were able to render the component you imported. Make sure to install the appropriate integration for the type of component you are trying to include in your page.
@@ -179,13 +179,13 @@ but ${plural ? 'none were' : 'it was not'} able to server-side render \`${compon
 			}`
 }`,
 	hint: (probableRenderers: string) =>
-		`Did you mean to enable the ${probableRenderers} integration?\n\nSee https://docs.astro.build/en/core-concepts/framework-components/ for more information on how to install and configure integrations.`,
+		`Did you mean to enable the ${probableRenderers} integration?\n\nSee https://docs.astro.build/en/guides/framework-components/ for more information on how to install and configure integrations.`,
 } satisfies ErrorData;
 /**
  * @docs
  * @see
  * - [addRenderer option](https://docs.astro.build/en/reference/integrations-reference/#addrenderer-option)
- * - [Hydrating framework components](https://docs.astro.build/en/core-concepts/framework-components/#hydrating-interactive-components)
+ * - [Hydrating framework components](https://docs.astro.build/en/guides/framework-components/#hydrating-interactive-components)
  * @description
  * Astro tried to hydrate a component on the client, but the renderer used does not provide a client entrypoint to use to hydrate.
  *
@@ -352,7 +352,7 @@ export const GetStaticPathsExpectedParams = {
  * ---
  * ```
  *
- * In routes using [rest parameters](https://docs.astro.build/en/core-concepts/routing/#rest-parameters), `undefined` can be used to represent a path with no parameters passed in the URL:
+ * In routes using [rest parameters](https://docs.astro.build/en/guides/routing/#rest-parameters), `undefined` can be used to represent a path with no parameters passed in the URL:
  *
  * ```astro title="/route/[...id].astro"
  * ---
@@ -376,18 +376,18 @@ export const GetStaticPathsInvalidRouteParam = {
 /**
  * @docs
  * @see
- * - [Dynamic Routes](https://docs.astro.build/en/core-concepts/routing/#dynamic-routes)
+ * - [Dynamic Routes](https://docs.astro.build/en/guides/routing/#dynamic-routes)
  * - [`getStaticPaths()`](https://docs.astro.build/en/reference/api-reference/#getstaticpaths)
  * - [Server-side Rendering](https://docs.astro.build/en/guides/server-side-rendering/)
  * @description
- * In [Static Mode](https://docs.astro.build/en/core-concepts/routing/#static-ssg-mode), all routes must be determined at build time. As such, dynamic routes must `export` a `getStaticPaths` function returning the different paths to generate.
+ * In [Static Mode](https://docs.astro.build/en/guides/routing/#static-ssg-mode), all routes must be determined at build time. As such, dynamic routes must `export` a `getStaticPaths` function returning the different paths to generate.
  */
 export const GetStaticPathsRequired = {
 	name: 'GetStaticPathsRequired',
 	title: '`getStaticPaths()` function required for dynamic routes.',
 	message:
 		'`getStaticPaths()` function is required for dynamic routes. Make sure that you `export` a `getStaticPaths` function from your dynamic route.',
-	hint: `See https://docs.astro.build/en/core-concepts/routing/#dynamic-routes for more information on dynamic routes.
+	hint: `See https://docs.astro.build/en/guides/routing/#dynamic-routes for more information on dynamic routes.
 
 Alternatively, set \`output: "server"\` or \`output: "hybrid"\` in your Astro config file to switch to a non-static server build. This error can also occur if using \`export const prerender = true;\`.
 See https://docs.astro.build/en/guides/server-side-rendering/ for more information on non-static rendering.`,
@@ -395,7 +395,7 @@ See https://docs.astro.build/en/guides/server-side-rendering/ for more informati
 /**
  * @docs
  * @see
- * - [Named slots](https://docs.astro.build/en/core-concepts/astro-components/#named-slots)
+ * - [Named slots](https://docs.astro.build/en/basics/astro-components/#named-slots)
  * @description
  * Certain words cannot be used for slot names due to being already used internally.
  */
@@ -468,7 +468,7 @@ export const InvalidComponentArgs = {
 /**
  * @docs
  * @see
- * - [Pagination](https://docs.astro.build/en/core-concepts/routing/#pagination)
+ * - [Pagination](https://docs.astro.build/en/guides/routing/#pagination)
  * @description
  * The page number parameter was not found in your filepath.
  */
@@ -515,12 +515,12 @@ export const InvalidImageService = {
 /**
  * @docs
  * @message
- * Missing width and height attributes for `IMAGE_URL`. When using remote images, both dimensions are always required in order to avoid cumulative layout shift (CLS).
+ * Missing width and height attributes for `IMAGE_URL`. When using remote images, both dimensions are required in order to avoid cumulative layout shift (CLS).
  * @see
  * - [Images](https://docs.astro.build/en/guides/images/)
- * - [Image component#width-and-height-required](https://docs.astro.build/en/guides/images/#width-and-height-required-for-public-and-remote-images)
+ * - [Image component#width-and-height-required](https://docs.astro.build/en/guides/images/#width-and-height-required-for-images-in-public)
  * @description
- * For remote images, `width` and `height` cannot be inferred from the original file. As such, in order to avoid CLS, those two properties are always required.
+ * For remote images, `width` and `height` cannot automatically be inferred from the original file. To avoid cumulative layout shift (CLS), either specify these two properties, or set [`inferSize`](https://docs.astro.build/en/guides/images/#infersize) to `true` to fetch a remote image's original dimensions.
  *
  * If your image is inside your `src` folder, you probably meant to import it instead. See [the Imports guide for more information](https://docs.astro.build/en/guides/imports/#other-assets).
  */
@@ -530,8 +530,21 @@ export const MissingImageDimension = {
 	message: (missingDimension: 'width' | 'height' | 'both', imageURL: string) =>
 		`Missing ${
 			missingDimension === 'both' ? 'width and height attributes' : `${missingDimension} attribute`
-		} for ${imageURL}. When using remote images, both dimensions are always required in order to avoid CLS.`,
-	hint: 'If your image is inside your `src` folder, you probably meant to import it instead. See [the Imports guide for more information](https://docs.astro.build/en/guides/imports/#other-assets).',
+		} for ${imageURL}. When using remote images, both dimensions are required unless in order to avoid CLS.`,
+	hint: 'If your image is inside your `src` folder, you probably meant to import it instead. See [the Imports guide for more information](https://docs.astro.build/en/guides/imports/#other-assets). You can also use `inferSize={true}` for remote images to get the original dimensions.',
+} satisfies ErrorData;
+/**
+ * @docs
+ * @message
+ * Failed to get the dimensions for `IMAGE_URL`.
+ * @description
+ * Determining the remote image's dimensions failed. This is typically caused by an incorrect URL or attempting to infer the size of an image in the public folder which is not possible.
+ */
+export const FailedToFetchRemoteImageDimensions = {
+	name: 'FailedToFetchRemoteImageDimensions',
+	title: 'Failed to retrieve remote image dimensions',
+	message: (imageURL: string) => `Failed to get the dimensions for ${imageURL}.`,
+	hint: 'Verify your remote image URL is accurate, and that you are not using `inferSize` with a file located in your `public/` folder.',
 } satisfies ErrorData;
 /**
  * @docs
@@ -587,7 +600,7 @@ export const PrerenderDynamicEndpointPathCollide = {
 	message: (pathname: string) =>
 		`Could not render \`${pathname}\` with an \`undefined\` param as the generated path will collide during prerendering. Prevent passing \`undefined\` as \`params\` for the endpoint's \`getStaticPaths()\` function, or add an additional extension to the endpoint's filename.`,
 	hint: (filename: string) =>
-		`Rename \`${filename}\` to \`${filename.replace(/\.(js|ts)/, (m) => `.json` + m)}\``,
+		`Rename \`${filename}\` to \`${filename.replace(/\.(?:js|ts)/, (m) => `.json` + m)}\``,
 } satisfies ErrorData;
 /**
  * @docs
@@ -859,7 +872,7 @@ export const LocalImageUsedWrongly = {
  * @see
  * - [Astro.glob](https://docs.astro.build/en/reference/api-reference/#astroglob)
  * @description
- * `Astro.glob()` can only be used in `.astro` files. You can use [`import.meta.glob()`](https://vitejs.dev/guide/features.html#glob-import) instead to acheive the same result.
+ * `Astro.glob()` can only be used in `.astro` files. You can use [`import.meta.glob()`](https://vitejs.dev/guide/features.html#glob-import) instead to achieve the same result.
  */
 export const AstroGlobUsedOutside = {
 	name: 'AstroGlobUsedOutside',
@@ -896,9 +909,9 @@ export const RedirectWithNoLocation = {
 /**
  * @docs
  * @see
- * - [Dynamic routes](https://docs.astro.build/en/core-concepts/routing/#dynamic-routes)
+ * - [Dynamic routes](https://docs.astro.build/en/guides/routing/#dynamic-routes)
  * @description
- * A dynamic route param is invalid. This is often caused by an `undefined` parameter or a missing [rest parameter](https://docs.astro.build/en/core-concepts/routing/#rest-parameters).
+ * A dynamic route param is invalid. This is often caused by an `undefined` parameter or a missing [rest parameter](https://docs.astro.build/en/guides/routing/#rest-parameters).
  */
 export const InvalidDynamicRoute = {
 	name: 'InvalidDynamicRoute',
@@ -1015,6 +1028,18 @@ export const MissingIndexForInternationalization = {
 	message: (defaultLocale: string) =>
 		`Could not find index page. A root index page is required in order to create a redirect to the index URL of the default locale. (\`/${defaultLocale}\`)`,
 	hint: (src: string) => `Create an index page (\`index.astro, index.md, etc.\`) in \`${src}\`.`,
+} satisfies ErrorData;
+
+/**
+ * @docs
+ * @description
+ * Static pages aren't yet supported with i18n domains. If you wish to enable this feature, you have to disable prerendering.
+ */
+export const NoPrerenderedRoutesWithDomains = {
+	name: 'NoPrerenderedRoutesWithDomains',
+	title: "Prerendered routes aren't supported when internationalization domains are enabled.",
+	message: (component: string) =>
+		`Static pages aren't yet supported with multiple domains. If you wish to enable this feature, you have to disable prerendering for the page ${component}`,
 } satisfies ErrorData;
 
 /**

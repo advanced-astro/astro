@@ -1,11 +1,15 @@
 import * as I18nInternals from '../i18n/index.js';
 import type { I18nInternalConfig } from '../i18n/vite-plugin-i18n.js';
+import { toRoutingStrategy } from '../i18n/utils.js';
 export { normalizeTheLocale, toCodes, toPaths } from '../i18n/index.js';
-// @ts-expect-error
-import config from 'astro-internal:i18n-config';
-const { trailingSlash, format, site, defaultLocale, locales, routing } =
-	config as I18nInternalConfig;
+
+const { trailingSlash, format, site, i18n, isBuild } =
+	// @ts-expect-error
+	__ASTRO_INTERNAL_I18N_CONFIG__ as I18nInternalConfig;
+const { defaultLocale, locales, domains } = i18n!;
 const base = import.meta.env.BASE_URL;
+
+const routing = toRoutingStrategy(i18n!);
 
 export type GetLocaleOptions = I18nInternals.GetLocaleOptions;
 
@@ -39,7 +43,8 @@ export const getRelativeLocaleUrl = (locale: string, path?: string, options?: Ge
 		format,
 		defaultLocale,
 		locales,
-		routing,
+		strategy: routing,
+		domains,
 		...options,
 	});
 
@@ -68,7 +73,7 @@ export const getRelativeLocaleUrl = (locale: string, path?: string, options?: Ge
  * getAbsoluteLocaleUrl("es_US", "getting-started", { prependWith: "blog", normalizeLocale: false }); // https://example.com/blog/es_US/getting-started
  * ```
  */
-export const getAbsoluteLocaleUrl = (locale: string, path = '', options?: GetLocaleOptions) =>
+export const getAbsoluteLocaleUrl = (locale: string, path?: string, options?: GetLocaleOptions) =>
 	I18nInternals.getLocaleAbsoluteUrl({
 		locale,
 		path,
@@ -78,7 +83,9 @@ export const getAbsoluteLocaleUrl = (locale: string, path = '', options?: GetLoc
 		site,
 		defaultLocale,
 		locales,
-		routing,
+		strategy: routing,
+		domains,
+		isBuild,
 		...options,
 	});
 
@@ -96,7 +103,8 @@ export const getRelativeLocaleUrlList = (path?: string, options?: GetLocaleOptio
 		format,
 		defaultLocale,
 		locales,
-		routing,
+		strategy: routing,
+		domains,
 		...options,
 	});
 
@@ -115,7 +123,9 @@ export const getAbsoluteLocaleUrlList = (path?: string, options?: GetLocaleOptio
 		format,
 		defaultLocale,
 		locales,
-		routing,
+		strategy: routing,
+		domains,
+		isBuild,
 		...options,
 	});
 
