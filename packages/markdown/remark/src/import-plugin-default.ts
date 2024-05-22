@@ -1,12 +1,12 @@
-// This file should be imported as `#import-plugin`
-import { resolve as importMetaResolve } from 'import-meta-resolve';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+// This file should be imported as `#import-plugin`
+import { resolve as importMetaResolve } from 'import-meta-resolve';
 import type * as unified from 'unified';
 
 let cwdUrlStr: string | undefined;
 
-// In non-browser enviroments, we can try to resolve from the filesystem too
+// In non-browser environments, we can try to resolve from the filesystem too
 export async function importPlugin(p: string): Promise<unified.Plugin> {
 	// Try import from this package first
 	try {

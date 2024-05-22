@@ -1,19 +1,17 @@
-import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
-import { type DBTable, type DBColumn } from '../core/types.js';
 import { type ColumnBuilderBaseConfig, type ColumnDataType, sql } from 'drizzle-orm';
 import {
+	type IndexBuilder,
+	type SQLiteColumnBuilderBase,
 	customType,
+	index,
 	integer,
 	sqliteTable,
 	text,
-	index,
-	type SQLiteColumnBuilderBase,
-	type IndexBuilder,
 } from 'drizzle-orm/sqlite-core';
-import { isSerializedSQL, type SerializedSQL } from './types.js';
+import type { DBColumn, DBTable } from '../core/types.js';
+import { type SerializedSQL, isSerializedSQL } from './types.js';
+import { pathToFileURL } from './utils.js';
 
-export { sql };
-export type SqliteDB = SqliteRemoteDatabase;
 export type { Table } from './types.js';
 export { createRemoteDatabaseClient, createLocalDatabaseClient } from './db-client.js';
 
@@ -21,10 +19,9 @@ export function hasPrimaryKey(column: DBColumn) {
 	return 'primaryKey' in column.schema && !!column.schema.primaryKey;
 }
 
-// Exports a few common expressions
-export const NOW = sql`CURRENT_TIMESTAMP`;
-export const TRUE = sql`TRUE`;
-export const FALSE = sql`FALSE`;
+// Taken from:
+// https://stackoverflow.com/questions/52869695/check-if-a-date-string-is-in-iso-and-utc-format
+const isISODateString = (str: string) => /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str);
 
 const dateType = customType<{ data: Date; driverData: string }>({
 	dataType() {
@@ -34,6 +31,11 @@ const dateType = customType<{ data: Date; driverData: string }>({
 		return value.toISOString();
 	},
 	fromDriver(value) {
+		if (!isISODateString(value)) {
+			// values saved using CURRENT_TIMESTAMP are not valid ISO strings
+			// but *are* in UTC, so append the UTC zone.
+			value += 'Z';
+		}
 		return new Date(value);
 	},
 });
@@ -54,17 +56,17 @@ type D1ColumnBuilder = SQLiteColumnBuilderBase<
 	ColumnBuilderBaseConfig<ColumnDataType, string> & { data: unknown }
 >;
 
-export function collectionToTable(name: string, collection: DBTable) {
+export function asDrizzleTable(name: string, table: DBTable) {
 	const columns: Record<string, D1ColumnBuilder> = {};
-	if (!Object.entries(collection.columns).some(([, column]) => hasPrimaryKey(column))) {
+	if (!Object.entries(table.columns).some(([, column]) => hasPrimaryKey(column))) {
 		columns['_id'] = integer('_id').primaryKey();
 	}
-	for (const [columnName, column] of Object.entries(collection.columns)) {
+	for (const [columnName, column] of Object.entries(table.columns)) {
 		columns[columnName] = columnMapper(columnName, column);
 	}
-	const table = sqliteTable(name, columns, (ormTable) => {
+	const drizzleTable = sqliteTable(name, columns, (ormTable) => {
 		const indexes: Record<string, IndexBuilder> = {};
-		for (const [indexName, indexProps] of Object.entries(collection.indexes ?? {})) {
+		for (const [indexName, indexProps] of Object.entries(table.indexes ?? {})) {
 			const onColNames = Array.isArray(indexProps.on) ? indexProps.on : [indexProps.on];
 			const onCols = onColNames.map((colName) => ormTable[colName]);
 			if (!atLeastOne(onCols)) continue;
@@ -73,7 +75,7 @@ export function collectionToTable(name: string, collection: DBTable) {
 		}
 		return indexes;
 	});
-	return table;
+	return drizzleTable;
 }
 
 function atLeastOne<T>(arr: T[]): arr is [T, ...T[]] {
@@ -136,4 +138,19 @@ function handleSerializedSQL<T>(def: T | SerializedSQL) {
 		return sql.raw(def.sql);
 	}
 	return def;
+}
+
+export function normalizeDatabaseUrl(envDbUrl: string | undefined, defaultDbUrl: string): string {
+	if (envDbUrl) {
+		// This could be a file URL, or more likely a root-relative file path.
+		// Convert it to a file URL.
+		if (envDbUrl.startsWith('file://')) {
+			return envDbUrl;
+		}
+
+		return new URL(envDbUrl, pathToFileURL(process.cwd()) + '/').toString();
+	} else {
+		// This is going to be a file URL always,
+		return defaultDbUrl;
+	}
 }

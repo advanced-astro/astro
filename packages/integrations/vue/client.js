@@ -1,5 +1,5 @@
-import { h, createSSRApp, createApp, Suspense } from 'vue';
 import { setup } from 'virtual:@astrojs/vue/app';
+import { Suspense, createApp, createSSRApp, h } from 'vue';
 import StaticHtml from './static-html.js';
 
 export default (element) =>

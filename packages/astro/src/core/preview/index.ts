@@ -5,14 +5,14 @@ import type { AstroInlineConfig, PreviewModule, PreviewServer } from '../../@typ
 import { AstroIntegrationLogger } from '../../core/logger/core.js';
 import { telemetry } from '../../events/index.js';
 import { eventCliSession } from '../../events/session.js';
-import { runHookConfigDone, runHookConfigSetup } from '../../integrations/index.js';
+import { runHookConfigDone, runHookConfigSetup } from '../../integrations/hooks.js';
 import { resolveConfig } from '../config/config.js';
 import { createNodeLogger } from '../config/logging.js';
 import { createSettings } from '../config/settings.js';
+import { apply as applyPolyfills } from '../polyfill.js';
+import { ensureProcessNodeEnv } from '../util.js';
 import createStaticPreviewServer from './static-preview-server.js';
 import { getResolvedHostForHttpServer } from './util.js';
-import { ensureProcessNodeEnv } from '../util.js';
-import { apply as applyPolyfills } from '../polyfill.js';
 
 /**
  * Starts a local server to serve your static dist/ directory. This command is useful for previewing

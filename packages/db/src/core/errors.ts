@@ -1,53 +1,50 @@
-import { cyan, bold, red, green, yellow } from 'kleur/colors';
+import { bold, cyan, red } from 'kleur/colors';
 
-export const MISSING_SESSION_ID_ERROR = `${red('▶ Login required!')}
+export const MISSING_EXECUTE_PATH_ERROR = `${red(
+	'▶ No file path provided.'
+)} Provide a path by running ${cyan('astro db execute <path>')}\n`;
 
-  To authenticate with Astro Studio, run
-  ${cyan('astro db login')}\n`;
+export const RENAME_TABLE_ERROR = (oldTable: string, newTable: string) => {
+	return (
+		red('\u25B6 Potential table rename detected: ' + oldTable + ' -> ' + newTable) +
+		`
+  You cannot add and remove tables in the same schema update batch.
 
-export const MISSING_PROJECT_ID_ERROR = `${red('▶ Directory not linked.')}
+  1. Use "deprecated: true" to deprecate a table before renaming.
+  2. Use "--force-reset" to ignore this warning and reset the database (deleting all of your data).
 
-  To link this directory to an Astro Studio project, run
-  ${cyan('astro db link')}\n`;
-
-export const STUDIO_CONFIG_MISSING_WRITABLE_TABLE_ERROR = (tableName: string) => `${red(
-	`▶ Writable table ${bold(tableName)} requires Astro Studio or the ${yellow(
-		'unsafeWritable'
-	)} option.`
-)}
-
-  Visit ${cyan('https://astro.build/studio')} to create your account
-  and set ${green('studio: true')} in your astro.config.mjs file to enable Studio.\n`;
-
-export const UNSAFE_WRITABLE_WARNING = `${yellow(
-	'unsafeWritable'
-)} option is enabled and you are using writable tables.
-  Redeploying your app may result in wiping away your database.
-	I hope you know what you are doing.\n`;
-
-export const STUDIO_CONFIG_MISSING_CLI_ERROR = `${red('▶ This command requires Astro Studio.')}
-
-  Visit ${cyan('https://astro.build/studio')} to create your account
-  and set ${green('studio: true')} in your astro.config.mjs file to enable Studio.\n`;
-
-export const MIGRATIONS_NOT_INITIALIZED = `${yellow(
-	'▶ No migrations found!'
-)}\n\n  To scaffold your migrations folder, run\n  ${cyan('astro db sync')}\n`;
-
-export const SEED_WRITABLE_IN_PROD_ERROR = (tableName: string) => {
-	return `${red(
-		`Writable tables should not be seeded in production with data().`
-	)} You can seed ${bold(
-		tableName
-	)} in development mode only using the "mode" flag. See the docs for more: https://www.notion.so/astroinc/astrojs-db-README-dcf6fa10de9a4f528be56cee96e8c054?pvs=4#278aed3fc37e4cec80240d1552ff6ac5`;
+	Visit https://docs.astro.build/en/guides/astro-db/#renaming-tables to learn more.`
+	);
 };
 
-export const SEED_ERROR = (tableName: string, error: string) => {
-	return `${red(`Error seeding table ${bold(tableName)}:`)}\n\n${error}`;
+export const RENAME_COLUMN_ERROR = (oldSelector: string, newSelector: string) => {
+	return (
+		red('▶ Potential column rename detected: ' + oldSelector + ', ' + newSelector) +
+		`\n  You cannot add and remove columns in the same table.` +
+		`\n  To resolve, add a 'deprecated: true' flag to '${oldSelector}' instead.`
+	);
 };
 
-export const SEED_EMPTY_ARRAY_ERROR = (tableName: string) => {
-	// Drizzle error says "values() must be called with at least one value."
-	// This is specific to db.insert(). Prettify for seed().
-	return SEED_ERROR(tableName, `Empty array was passed. seed() must receive at least one value.`);
+export const FILE_NOT_FOUND_ERROR = (path: string) => `${red('▶ File not found:')} ${bold(path)}\n`;
+
+export const SHELL_QUERY_MISSING_ERROR = `${red(
+	'▶ Please provide a query to execute using the --query flag.'
+)}\n`;
+
+export const EXEC_ERROR = (error: string) => {
+	return `${red(`Error while executing file:`)}\n\n${error}`;
+};
+
+export const EXEC_DEFAULT_EXPORT_ERROR = (fileName: string) => {
+	return EXEC_ERROR(`Missing default function export in ${bold(fileName)}`);
+};
+
+export const INTEGRATION_TABLE_CONFLICT_ERROR = (
+	integrationName: string,
+	tableName: string,
+	isUserConflict: boolean
+) => {
+	return red('▶ Conflicting table name in integration ' + bold(integrationName)) + isUserConflict
+		? `\n  A user-defined table named ${bold(tableName)} already exists`
+		: `\n  Another integration already added a table named ${bold(tableName)}`;
 };

@@ -1,6 +1,6 @@
+import { pathToFileURL } from 'node:url';
 import { prompt } from '@astrojs/cli-kit';
 import arg from 'arg';
-import { pathToFileURL } from 'node:url';
 import detectPackageManager from 'which-pm-runs';
 
 export interface Context {
@@ -39,7 +39,11 @@ export async function getContext(argv: string[]): Promise<Context> {
 	);
 
 	const packageManager = detectPackageManager()?.name ?? 'npm';
-	const { _: [version = 'latest'] = [], '--help': help = false, '--dry-run': dryRun } = flags;
+	const {
+		_: [version = 'latest'] = [],
+		'--help': help = false,
+		'--dry-run': dryRun,
+	} = flags;
 
 	return {
 		help,

@@ -1,11 +1,11 @@
-import { bold } from 'kleur/colors';
 import { extname } from 'node:path';
+import { bold } from 'kleur/colors';
 import type { Plugin as VitePlugin } from 'vite';
 import { normalizePath } from 'vite';
 import type { AstroSettings } from '../@types/astro.js';
 import { type Logger } from '../core/logger/core.js';
-import { isEndpoint, isPage, rootRelativePath } from '../core/util.js';
-import { getPrerenderDefault, isServerLikeOutput } from '../prerender/utils.js';
+import { isEndpoint, isPage, isServerLikeOutput, rootRelativePath } from '../core/util.js';
+import { getPrerenderDefault } from '../prerender/utils.js';
 import { scan } from './scan.js';
 
 export interface AstroPluginScannerOptions {

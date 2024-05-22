@@ -1,175 +1,91 @@
-import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
-import {
-	type BooleanColumn,
-	type DBTable,
-	type DBTables,
-	type DBColumn,
-	type DateColumn,
-	type ColumnType,
-	type JsonColumn,
-	type NumberColumn,
-	type TextColumn,
-} from '../core/types.js';
+import { type SQL } from 'drizzle-orm';
+import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 import { bold } from 'kleur/colors';
-import { type SQL, sql, getTableName } from 'drizzle-orm';
-import { SQLiteAsyncDialect, type SQLiteInsert } from 'drizzle-orm/sqlite-core';
-import type { AstroIntegrationLogger } from 'astro';
-import type {
-	ColumnsConfig,
-	DBUserConfig,
-	MaybeArray,
-	ResolvedCollectionConfig,
-} from '../core/types.js';
+import {
+	FOREIGN_KEY_DNE_ERROR,
+	FOREIGN_KEY_REFERENCES_EMPTY_ERROR,
+	FOREIGN_KEY_REFERENCES_LENGTH_ERROR,
+	REFERENCE_DNE_ERROR,
+} from '../runtime/errors.js';
 import { hasPrimaryKey } from '../runtime/index.js';
 import { isSerializedSQL } from '../runtime/types.js';
-import { SEED_EMPTY_ARRAY_ERROR, SEED_ERROR, SEED_WRITABLE_IN_PROD_ERROR } from './errors.js';
+import type {
+	BooleanColumn,
+	ColumnType,
+	DBColumn,
+	DBTable,
+	DateColumn,
+	JsonColumn,
+	NumberColumn,
+	TextColumn,
+} from './types.js';
 
 const sqlite = new SQLiteAsyncDialect();
 
-export async function recreateTables({
-	db,
-	tables,
-}: {
-	db: SqliteRemoteDatabase;
-	tables: DBTables;
-}) {
-	const setupQueries: SQL[] = [];
-	for (const [name, collection] of Object.entries(tables)) {
-		const dropQuery = sql.raw(`DROP TABLE IF EXISTS ${sqlite.escapeName(name)}`);
-		const createQuery = sql.raw(getCreateTableQuery(name, collection));
-		const indexQueries = getCreateIndexQueries(name, collection);
-		setupQueries.push(dropQuery, createQuery, ...indexQueries.map((s) => sql.raw(s)));
-	}
-	for (const q of setupQueries) {
-		await db.run(q);
-	}
+export const SEED_DEV_FILE_NAME = ['seed.ts', 'seed.js', 'seed.mjs', 'seed.mts'];
+
+export function getDropTableIfExistsQuery(tableName: string) {
+	return `DROP TABLE IF EXISTS ${sqlite.escapeName(tableName)}`;
 }
 
-export async function seedData({
-	db,
-	data,
-	logger,
-	mode,
-}: {
-	db: SqliteRemoteDatabase;
-	data: DBUserConfig['data'];
-	logger?: AstroIntegrationLogger;
-	mode: 'dev' | 'build';
-}) {
-	const dataFns = Array.isArray(data) ? data : [data];
-	try {
-		for (const dataFn of dataFns) {
-			await dataFn({
-				seed: async (config, values) => {
-					seedErrorChecks(mode, config, values);
-					try {
-						await db.insert(config.table).values(values as any);
-					} catch (e) {
-						const msg = e instanceof Error ? e.message : String(e);
-						throw new Error(SEED_ERROR(getTableName(config.table), msg));
-					}
-				},
-				seedReturning: async (config, values) => {
-					seedErrorChecks(mode, config, values);
-					try {
-						let result: SQLiteInsert<any, any, any, any> = db
-							.insert(config.table)
-							.values(values as any)
-							.returning();
-						if (!Array.isArray(values)) {
-							result = result.get();
-						}
-						return result;
-					} catch (e) {
-						const msg = e instanceof Error ? e.message : String(e);
-						throw new Error(SEED_ERROR(getTableName(config.table), msg));
-					}
-				},
-				db,
-				mode,
-			});
-		}
-	} catch (e) {
-		if (!(e instanceof Error)) throw e;
-		(logger ?? console).error(e.message);
-	}
-}
-
-function seedErrorChecks<T extends ColumnsConfig>(
-	mode: 'dev' | 'build',
-	{ table, writable }: ResolvedCollectionConfig<T, boolean>,
-	values: MaybeArray<unknown>
-) {
-	const tableName = getTableName(table);
-	if (writable && mode === 'build' && process.env.ASTRO_DB_TEST_ENV !== '1') {
-		throw new Error(SEED_WRITABLE_IN_PROD_ERROR(tableName));
-	}
-	if (Array.isArray(values) && values.length === 0) {
-		throw new Error(SEED_EMPTY_ARRAY_ERROR(tableName));
-	}
-}
-
-export function getCreateTableQuery(collectionName: string, collection: DBTable) {
-	let query = `CREATE TABLE ${sqlite.escapeName(collectionName)} (`;
+export function getCreateTableQuery(tableName: string, table: DBTable) {
+	let query = `CREATE TABLE ${sqlite.escapeName(tableName)} (`;
 
 	const colQueries = [];
-	const colHasPrimaryKey = Object.entries(collection.columns).find(([, column]) =>
+	const colHasPrimaryKey = Object.entries(table.columns).find(([, column]) =>
 		hasPrimaryKey(column)
 	);
 	if (!colHasPrimaryKey) {
 		colQueries.push('_id INTEGER PRIMARY KEY');
 	}
-	for (const [columnName, column] of Object.entries(collection.columns)) {
+	for (const [columnName, column] of Object.entries(table.columns)) {
 		const colQuery = `${sqlite.escapeName(columnName)} ${schemaTypeToSqlType(
 			column.type
 		)}${getModifiers(columnName, column)}`;
 		colQueries.push(colQuery);
 	}
 
-	colQueries.push(...getCreateForeignKeyQueries(collectionName, collection));
+	colQueries.push(...getCreateForeignKeyQueries(tableName, table));
 
 	query += colQueries.join(', ') + ')';
 	return query;
 }
 
-export function getCreateIndexQueries(
-	collectionName: string,
-	collection: Pick<DBTable, 'indexes'>
-) {
+export function getCreateIndexQueries(tableName: string, table: Pick<DBTable, 'indexes'>) {
 	let queries: string[] = [];
-	for (const [indexName, indexProps] of Object.entries(collection.indexes ?? {})) {
+	for (const [indexName, indexProps] of Object.entries(table.indexes ?? {})) {
 		const onColNames = asArray(indexProps.on);
 		const onCols = onColNames.map((colName) => sqlite.escapeName(colName));
 
 		const unique = indexProps.unique ? 'UNIQUE ' : '';
 		const indexQuery = `CREATE ${unique}INDEX ${sqlite.escapeName(
 			indexName
-		)} ON ${sqlite.escapeName(collectionName)} (${onCols.join(', ')})`;
+		)} ON ${sqlite.escapeName(tableName)} (${onCols.join(', ')})`;
 		queries.push(indexQuery);
 	}
 	return queries;
 }
 
-export function getCreateForeignKeyQueries(collectionName: string, collection: DBTable) {
+export function getCreateForeignKeyQueries(tableName: string, table: DBTable) {
 	let queries: string[] = [];
-	for (const foreignKey of collection.foreignKeys ?? []) {
+	for (const foreignKey of table.foreignKeys ?? []) {
 		const columns = asArray(foreignKey.columns);
 		const references = asArray(foreignKey.references);
 
 		if (columns.length !== references.length) {
-			throw new Error(
-				`Foreign key on ${collectionName} is misconfigured. \`columns\` and \`references\` must be the same length.`
-			);
+			throw new Error(FOREIGN_KEY_REFERENCES_LENGTH_ERROR(tableName));
 		}
-		const referencedCollection = references[0]?.schema.collection;
-		if (!referencedCollection) {
-			throw new Error(
-				`Foreign key on ${collectionName} is misconfigured. \`references\` cannot be empty.`
-			);
+		const firstReference = references[0];
+		if (!firstReference) {
+			throw new Error(FOREIGN_KEY_REFERENCES_EMPTY_ERROR(tableName));
+		}
+		const referencedTable = firstReference.schema.collection;
+		if (!referencedTable) {
+			throw new Error(FOREIGN_KEY_DNE_ERROR(tableName));
 		}
 		const query = `FOREIGN KEY (${columns
 			.map((f) => sqlite.escapeName(f))
-			.join(', ')}) REFERENCES ${sqlite.escapeName(referencedCollection)}(${references
+			.join(', ')}) REFERENCES ${sqlite.escapeName(referencedTable)}(${references
 			.map((r) => sqlite.escapeName(r.schema.name!))
 			.join(', ')})`;
 		queries.push(query);
@@ -209,14 +125,12 @@ export function getModifiers(columnName: string, column: DBColumn) {
 	}
 	const references = getReferencesConfig(column);
 	if (references) {
-		const { collection, name } = references.schema;
-		if (!collection || !name) {
-			throw new Error(
-				`Column ${collection}.${name} references a collection that does not exist. Did you apply the referenced collection to the \`tables\` object in your Astro config?`
-			);
+		const { collection: tableName, name } = references.schema;
+		if (!tableName || !name) {
+			throw new Error(REFERENCE_DNE_ERROR(columnName));
 		}
 
-		modifiers += ` REFERENCES ${sqlite.escapeName(collection)} (${sqlite.escapeName(name)})`;
+		modifiers += ` REFERENCES ${sqlite.escapeName(tableName)} (${sqlite.escapeName(name)})`;
 	}
 	return modifiers;
 }

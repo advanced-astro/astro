@@ -2,21 +2,20 @@
 import type yargs from 'yargs-parser';
 import type { AstroSettings } from '../../@types/astro.js';
 
-import { bgGreen, black, bold, dim, yellow } from 'kleur/colors';
 import { fileURLToPath } from 'node:url';
+import { bgGreen, black, bold, dim, yellow } from 'kleur/colors';
 
+import { formatWithOptions } from 'node:util';
 import dlv from 'dlv';
+import { flattie } from 'flattie';
 import { resolveConfig } from '../../core/config/config.js';
 import { createSettings } from '../../core/config/settings.js';
-import * as msg from '../../core/messages.js';
-import { DEFAULT_PREFERENCES } from '../../preferences/defaults.js';
-import { coerce, isValidKey, type PreferenceKey } from '../../preferences/index.js';
-import { createLoggerFromFlags, flagsToAstroInlineConfig } from '../flags.js';
-// @ts-expect-error flattie types are mispackaged
-import { flattie } from 'flattie';
-import { formatWithOptions } from 'node:util';
 import { collectErrorMetadata } from '../../core/errors/dev/utils.js';
+import * as msg from '../../core/messages.js';
 import { apply as applyPolyfill } from '../../core/polyfill.js';
+import { DEFAULT_PREFERENCES } from '../../preferences/defaults.js';
+import { type PreferenceKey, coerce, isValidKey } from '../../preferences/index.js';
+import { createLoggerFromFlags, flagsToAstroInlineConfig } from '../flags.js';
 
 interface PreferencesOptions {
 	flags: yargs.Arguments;
@@ -125,7 +124,7 @@ interface SubcommandOptions {
 	json?: boolean;
 }
 
-// Default `location` to "project" to avoid reading default preferencesa
+// Default `location` to "project" to avoid reading default preferences
 async function getPreference(
 	settings: AstroSettings,
 	key: PreferenceKey,
@@ -321,7 +320,7 @@ const chars = {
 	bottomRight: '╯',
 };
 
-// this is only used to deternine the column width
+// this is only used to determine the column width
 function annotatedFormat(mv: AnnotatedValue) {
 	return mv.annotation ? `${mv.value} ${mv.annotation}` : mv.value.toString();
 }

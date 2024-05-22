@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
 
       - name: Setup node@${{ matrix.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -105,12 +105,12 @@ jobs:
     strategy:
       matrix:
         OS: [ubuntu-latest]
-        NODE_VERSION: [18, 20.5.1]
+        NODE_VERSION: [18, 20]
         include:
           - os: macos-14
             NODE_VERSION: 18
           - os: windows-latest
-            NODE_VERSION: 18.17.1
+            NODE_VERSION: 18
       fail-fast: false
     env:
       NODE_VERSION: ${{ matrix.NODE_VERSION }}
@@ -122,7 +122,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
 
       - name: Setup node@${{ matrix.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -147,7 +147,7 @@ jobs:
     strategy:
       matrix:
         OS: [ubuntu-latest, windows-latest]
-        NODE_VERSION: [18.17.1]
+        NODE_VERSION: [18]
       fail-fast: false
     env:
       NODE_VERSION: ${{ matrix.NODE_VERSION }}
@@ -159,7 +159,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
 
       - name: Setup node@${{ matrix.NODE_VERSION }}
         uses: actions/setup-node@v4
@@ -195,7 +195,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
 
       - name: Setup node@${{ matrix.NODE_VERSION }}
         uses: actions/setup-node@v4

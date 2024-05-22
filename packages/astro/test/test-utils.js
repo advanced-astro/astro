@@ -8,7 +8,7 @@ import stripAnsi from 'strip-ansi';
 import { check } from '../dist/cli/check/index.js';
 import build from '../dist/core/build/index.js';
 import { RESOLVED_SPLIT_MODULE_ID } from '../dist/core/build/plugins/plugin-ssr.js';
-import { getVirtualModulePageNameFromPath } from '../dist/core/build/plugins/util.js';
+import { getVirtualModulePageName } from '../dist/core/build/plugins/util.js';
 import { makeSplitEntryPointFileName } from '../dist/core/build/static-build.js';
 import { mergeConfig, resolveConfig } from '../dist/core/config/index.js';
 import { dev, preview } from '../dist/core/index.js';
@@ -25,6 +25,8 @@ process.env.ASTRO_TELEMETRY_DISABLED = true;
  * @typedef {import('../src/core/app/index').App} App
  * @typedef {import('../src/cli/check/index').AstroChecker} AstroChecker
  * @typedef {import('../src/cli/check/index').CheckPayload} CheckPayload
+ * @typedef {import('http').IncomingMessage} NodeRequest
+ * @typedef {import('http').ServerResponse} NodeResponse
  *
  *
  * @typedef {Object} Fixture
@@ -40,6 +42,7 @@ process.env.ASTRO_TELEMETRY_DISABLED = true;
  * @property {typeof preview} preview
  * @property {() => Promise<void>} clean
  * @property {() => Promise<App>} loadTestAdapterApp
+ * @property {() => Promise<(req: NodeRequest, res: NodeResponse) => void>} loadNodeAdapterHandler
  * @property {() => Promise<void>} onNextChange
  * @property {typeof check} check
  * @property {typeof sync} sync
@@ -204,14 +207,19 @@ export async function loadFixture(inlineConfig) {
 				recursive: true,
 				force: true,
 			});
-			const contentCache = new URL('./node_modules/.astro/content', config.root);
-			if (fs.existsSync(contentCache)) {
-				await fs.promises.rm(contentCache, {
+			const astroCache = new URL('./node_modules/.astro', config.root);
+			if (fs.existsSync(astroCache)) {
+				await fs.promises.rm(astroCache, {
 					maxRetries: 10,
 					recursive: true,
 					force: true,
 				});
 			}
+		},
+		loadNodeAdapterHandler: async () => {
+			const url = new URL(`./server/entry.mjs?id=${fixtureId}`, config.outDir);
+			const { handler } = await import(url);
+			return handler;
 		},
 		loadTestAdapterApp: async (streaming) => {
 			const url = new URL(`./server/entry.mjs?id=${fixtureId}`, config.outDir);
@@ -221,7 +229,7 @@ export async function loadFixture(inlineConfig) {
 			return app;
 		},
 		loadEntryPoint: async (pagePath, routes, streaming) => {
-			const virtualModule = getVirtualModulePageNameFromPath(RESOLVED_SPLIT_MODULE_ID, pagePath);
+			const virtualModule = getVirtualModulePageName(RESOLVED_SPLIT_MODULE_ID, pagePath);
 			const filePath = makeSplitEntryPointFileName(virtualModule, routes);
 			const url = new URL(`./server/${filePath}?id=${fixtureId}`, config.outDir);
 			const { createApp, manifest } = await import(url);

@@ -33,5 +33,15 @@ describe('astro:assets - delete images that are unused', () => {
 			const imagesUsedElsewhere = await fixture.glob('_astro/url.*.*');
 			assert.equal(imagesUsedElsewhere.length, 2);
 		});
+
+		it('should delete MDX images only used for optimization', async () => {
+			const imagesOnlyOptimized = await fixture.glob('_astro/mdxDontExist.*.*');
+			assert.equal(imagesOnlyOptimized.length, 1);
+		});
+
+		it('should always keep Markdoc images', async () => {
+			const imagesUsedElsewhere = await fixture.glob('_astro/markdocStillExists.*.*');
+			assert.equal(imagesUsedElsewhere.length, 2);
+		});
 	});
 });

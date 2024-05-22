@@ -1,3 +1,4 @@
+import cssesc from 'cssesc';
 import type {
 	SSRResult,
 	TransitionAnimation,
@@ -7,7 +8,6 @@ import type {
 } from '../../@types/astro.js';
 import { fade, slide } from '../../transitions/index.js';
 import { markHTMLString } from './escape.js';
-import cssesc from 'cssesc';
 
 const transitionNameMap = new WeakMap<SSRResult, number>();
 function incrementTransitionNumber(result: SSRResult) {
@@ -71,7 +71,7 @@ function reEncode(s: string) {
 			// we replace it with its hex value escaped by an underscore for decodability (and better readability,
 			// because most of them are punctuations like ,'"":;_..., and '_' might be a better choice than '-')
 			// The underscore itself (code 95) is also escaped and encoded as two underscores to avoid
-			// collitions between original and encoded strings.
+			// collisions between original and encoded strings.
 			// All other values are just copied over
 			result +=
 				codepoint < 0x80
@@ -107,6 +107,7 @@ export function renderTransition(
 		sheet.addFallback('old', 'animation: none; mix-blend-mode: normal;');
 		sheet.addModern('old', 'animation: none; opacity: 0; mix-blend-mode: normal;');
 		sheet.addAnimationRaw('new', 'animation: none; mix-blend-mode: normal;');
+		sheet.addModern('group', 'animation: none');
 	}
 
 	result._metadata.extraHead.push(markHTMLString(`<style>${sheet.toString()}</style>`));

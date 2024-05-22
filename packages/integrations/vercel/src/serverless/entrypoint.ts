@@ -1,18 +1,18 @@
-import type { SSRManifest } from 'astro';
-import { applyPolyfills, NodeApp } from 'astro/app/node';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { SSRManifest } from 'astro';
+import { NodeApp, applyPolyfills } from 'astro/app/node';
 import {
-	ASTRO_PATH_HEADER,
-	ASTRO_PATH_PARAM,
 	ASTRO_LOCALS_HEADER,
 	ASTRO_MIDDLEWARE_SECRET_HEADER,
+	ASTRO_PATH_HEADER,
+	ASTRO_PATH_PARAM,
 } from './adapter.js';
 
 applyPolyfills();
 
 export const createExports = (
 	manifest: SSRManifest,
-	{ middlewareSecret }: { middlewareSecret: string }
+	{ middlewareSecret, skewProtection }: { middlewareSecret: string; skewProtection: boolean }
 ) => {
 	const app = new NodeApp(manifest);
 	const handler = async (req: IncomingMessage, res: ServerResponse) => {
@@ -37,6 +37,11 @@ export const createExports = (
 		}
 		// hide the secret from the rest of user code
 		delete req.headers[ASTRO_MIDDLEWARE_SECRET_HEADER];
+
+		// https://vercel.com/docs/deployments/skew-protection#supported-frameworks
+		if (skewProtection && process.env.VERCEL_SKEW_PROTECTION_ENABLED === '1') {
+			req.headers['x-deployment-id'] = process.env.VERCEL_DEPLOYMENT_ID;
+		}
 
 		const webResponse = await app.render(req, { addCookieHeader: true, clientAddress, locals });
 		await NodeApp.writeResponse(webResponse, res);

@@ -1,6 +1,6 @@
-import type { AstroIntegrationLogger } from 'astro';
-import { relative, relative as relativePath } from 'node:path';
+import { relative as relativePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { AstroIntegrationLogger } from 'astro';
 import { copyFilesToFunction } from './fs.js';
 
 export async function copyDependenciesToFunction(
@@ -21,7 +21,7 @@ export async function copyDependenciesToFunction(
 	cache: object
 ): Promise<{ handler: string }> {
 	const entryPath = fileURLToPath(entry);
-	logger.info(`Bundling function ${relative(fileURLToPath(outDir), entryPath)}`);
+	logger.info(`Bundling function ${relativePath(fileURLToPath(outDir), entryPath)}`);
 
 	// Get root of folder of the system (like C:\ on Windows or / on Linux)
 	let base = entry;
@@ -53,11 +53,11 @@ export async function copyDependenciesToFunction(
 			if (module === 'sharp') continue;
 
 			if (entryPath === file) {
-				console.warn(
+				logger.debug(
 					`[@astrojs/vercel] The module "${module}" couldn't be resolved. This may not be a problem, but it's worth checking.`
 				);
 			} else {
-				console.warn(
+				logger.debug(
 					`[@astrojs/vercel] The module "${module}" inside the file "${file}" couldn't be resolved. This may not be a problem, but it's worth checking.`
 				);
 			}

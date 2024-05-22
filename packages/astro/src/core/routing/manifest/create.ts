@@ -8,19 +8,20 @@ import type {
 } from '../../../@types/astro.js';
 import type { Logger } from '../../logger/core.js';
 
-import { bold } from 'kleur/colors';
 import { createRequire } from 'module';
 import nodeFs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { bold } from 'kleur/colors';
+import { toRoutingStrategy } from '../../../i18n/utils.js';
 import { getPrerenderDefault } from '../../../prerender/utils.js';
 import { SUPPORTED_MARKDOWN_FILE_EXTENSIONS } from '../../constants.js';
 import { MissingIndexForInternationalization } from '../../errors/errors-data.js';
 import { AstroError } from '../../errors/index.js';
 import { removeLeadingForwardSlash, slash } from '../../path.js';
 import { resolvePages } from '../../util.js';
+import { routeComparator } from '../priority.js';
 import { getRouteGenerator } from './generator.js';
-import { toRoutingStrategy } from '../../../i18n/utils.js';
 const require = createRequire(import.meta.url);
 
 interface Item {
@@ -42,11 +43,14 @@ function countOccurrences(needle: string, haystack: string) {
 	return count;
 }
 
-function getParts(part: string, file: string) {
+// Disable eslint as we're not sure how to improve this regex yet
+// eslint-disable-next-line regexp/no-super-linear-backtracking
+const ROUTE_DYNAMIC_SPLIT = /\[(.+?\(.+?\)|.+?)\]/;
+const ROUTE_SPREAD = /^\.{3}.+$/;
+
+export function getParts(part: string, file: string) {
 	const result: RoutePart[] = [];
-	// Disable eslint as we're not sure how to improve this regex yet
-	// eslint-disable-next-line regexp/no-super-linear-backtracking
-	part.split(/\[(.+?\(.+?\)|.+?)\]/).map((str, i) => {
+	part.split(ROUTE_DYNAMIC_SPLIT).map((str, i) => {
 		if (!str) return;
 		const dynamic = i % 2 === 1;
 
@@ -59,19 +63,18 @@ function getParts(part: string, file: string) {
 		result.push({
 			content,
 			dynamic,
-			spread: dynamic && /^\.{3}.+$/.test(content),
+			spread: dynamic && ROUTE_SPREAD.test(content),
 		});
 	});
 
 	return result;
 }
 
-function getPattern(
+export function getPattern(
 	segments: RoutePart[][],
-	config: AstroConfig,
+	base: AstroConfig['base'],
 	addTrailingSlash: AstroConfig['trailingSlash']
 ) {
-	const base = config.base;
 	const pathname = segments
 		.map((segment) => {
 			if (segment.length === 1 && segment[0].spread) {
@@ -120,7 +123,7 @@ function getTrailingSlashPattern(addTrailingSlash: AstroConfig['trailingSlash'])
 	return '\\/?$';
 }
 
-function validateSegment(segment: string, file = '') {
+export function validateSegment(segment: string, file = '') {
 	if (!file) file = segment;
 
 	if (/\]\[/.test(segment)) {
@@ -169,102 +172,6 @@ function isSemanticallyEqualSegment(segmentA: RoutePart[], segmentB: RoutePart[]
 	}
 
 	return true;
-}
-
-/**
- * Comparator for sorting routes in resolution order.
- *
- * The routes are sorted in by the following rules in order, following the first rule that
- * applies:
- * - More specific routes are sorted before less specific routes. Here, "specific" means
- *   the number of segments in the route, so a parent route is always sorted after its children.
- *   For example, `/foo/bar` is sorted before `/foo`.
- *   Index routes, originating from a file named `index.astro`, are considered to have one more
- *   segment than the URL they represent.
- * - Static routes are sorted before dynamic routes.
- *   For example, `/foo/bar` is sorted before `/foo/[bar]`.
- * - Dynamic routes with single parameters are sorted before dynamic routes with rest parameters.
- *   For example, `/foo/[bar]` is sorted before `/foo/[...bar]`.
- * - Prerendered routes are sorted before non-prerendered routes.
- * - Endpoints are sorted before pages.
- *   For example, a file `/foo.ts` is sorted before `/bar.astro`.
- * - If both routes are equal regarding all previosu conditions, they are sorted alphabetically.
- *   For example, `/bar` is sorted before `/foo`.
- *   The definition of "alphabetically" is dependent on the default locale of the running system.
- */
-
-function routeComparator(a: RouteData, b: RouteData) {
-	const commonLength = Math.min(a.segments.length, b.segments.length);
-
-	for (let index = 0; index < commonLength; index++) {
-		const aSegment = a.segments[index];
-		const bSegment = b.segments[index];
-
-		const aIsStatic = aSegment.every((part) => !part.dynamic && !part.spread);
-		const bIsStatic = bSegment.every((part) => !part.dynamic && !part.spread);
-
-		if (aIsStatic && bIsStatic) {
-			// Both segments are static, they are sorted alphabetically if they are different
-			const aContent = aSegment.map((part) => part.content).join('');
-			const bContent = bSegment.map((part) => part.content).join('');
-
-			if (aContent !== bContent) {
-				return aContent.localeCompare(bContent);
-			}
-		}
-
-		// Sort static routes before dynamic routes
-		if (aIsStatic !== bIsStatic) {
-			return aIsStatic ? -1 : 1;
-		}
-
-		const aHasSpread = aSegment.some((part) => part.spread);
-		const bHasSpread = bSegment.some((part) => part.spread);
-
-		// Sort dynamic routes with rest parameters after dynamic routes with single parameters
-		// (also after static, but that is already covered by the previous condition)
-		if (aHasSpread !== bHasSpread) {
-			return aHasSpread ? 1 : -1;
-		}
-	}
-
-	const aLength = a.segments.length;
-	const bLength = b.segments.length;
-
-	if (aLength !== bLength) {
-		const aEndsInRest = a.segments.at(-1)?.some((part) => part.spread);
-		const bEndsInRest = b.segments.at(-1)?.some((part) => part.spread);
-
-		if (aEndsInRest !== bEndsInRest && Math.abs(aLength - bLength) === 1) {
-			// If only one of the routes ends in a rest parameter
-			// and the difference in length is exactly 1
-			// and the shorter route is the one that ends in a rest parameter
-			// the shorter route is considered more specific.
-			// I.e. `/foo` is considered more specific than `/foo/[...bar]`
-			if (aLength > bLength && aEndsInRest) {
-				// b: /foo
-				// a: /foo/[...bar]
-				return 1;
-			}
-
-			if (bLength > aLength && bEndsInRest) {
-				// a: /foo
-				// b: /foo/[...bar]
-				return -1;
-			}
-		}
-
-		// Sort routes by length
-		return aLength > bLength ? -1 : 1;
-	}
-
-	// Sort endpoints before pages
-	if ((a.type === 'endpoint') !== (b.type === 'endpoint')) {
-		return a.type === 'endpoint' ? -1 : 1;
-	}
-
-	// Both routes have segments with the same properties
-	return a.route.localeCompare(b.route);
 }
 
 export interface CreateRouteManifestParams {
@@ -384,14 +291,12 @@ function createFileBasedRoutes(
 				components.push(item.file);
 				const component = item.file;
 				const { trailingSlash } = settings.config;
-				const pattern = getPattern(segments, settings.config, trailingSlash);
+				const pattern = getPattern(segments, settings.config.base, trailingSlash);
 				const generate = getRouteGenerator(segments, trailingSlash);
 				const pathname = segments.every((segment) => segment.length === 1 && !segment[0].dynamic)
 					? `/${segments.map((segment) => segment[0].content).join('/')}`
 					: null;
-				const route = `/${segments
-					.map(([{ dynamic, content }]) => (dynamic ? `[${content}]` : content))
-					.join('/')}`.toLowerCase();
+				const route = joinSegments(segments);
 				routes.push({
 					route,
 					isIndex: item.isIndex,
@@ -457,7 +362,7 @@ function createInjectedRoutes({ settings, cwd }: CreateRouteManifestParams): Pri
 		const isPage = type === 'page';
 		const trailingSlash = isPage ? config.trailingSlash : 'never';
 
-		const pattern = getPattern(segments, settings.config, trailingSlash);
+		const pattern = getPattern(segments, settings.config.base, trailingSlash);
 		const generate = getRouteGenerator(segments, trailingSlash);
 		const pathname = segments.every((segment) => segment.length === 1 && !segment[0].dynamic)
 			? `/${segments.map((segment) => segment[0].content).join('/')}`
@@ -466,9 +371,7 @@ function createInjectedRoutes({ settings, cwd }: CreateRouteManifestParams): Pri
 			.flat()
 			.filter((p) => p.dynamic)
 			.map((p) => p.content);
-		const route = `/${segments
-			.map(([{ dynamic, content }]) => (dynamic ? `[${content}]` : content))
-			.join('/')}`.toLowerCase();
+		const route = joinSegments(segments);
 
 		routes[priority].push({
 			type,
@@ -515,7 +418,7 @@ function createRedirectRoutes(
 				return getParts(s, from);
 			});
 
-		const pattern = getPattern(segments, settings.config, trailingSlash);
+		const pattern = getPattern(segments, settings.config.base, trailingSlash);
 		const generate = getRouteGenerator(segments, trailingSlash);
 		const pathname = segments.every((segment) => segment.length === 1 && !segment[0].dynamic)
 			? `/${segments.map((segment) => segment[0].content).join('/')}`
@@ -524,9 +427,7 @@ function createRedirectRoutes(
 			.flat()
 			.filter((p) => p.dynamic)
 			.map((p) => p.content);
-		const route = `/${segments
-			.map(([{ dynamic, content }]) => (dynamic ? `[${content}]` : content))
-			.join('/')}`.toLowerCase();
+		const route = joinSegments(segments);
 
 		let destination: string;
 		if (typeof to === 'string') {
@@ -687,7 +588,7 @@ export function createRouteManifest(
 
 	const i18n = settings.config.i18n;
 	if (i18n) {
-		const strategy = toRoutingStrategy(i18n);
+		const strategy = toRoutingStrategy(i18n.routing, i18n.domains);
 		// First we check if the user doesn't have an index page.
 		if (strategy === 'pathname-prefix-always') {
 			let index = routes.find((route) => route.route === '/');
@@ -785,7 +686,7 @@ export function createRouteManifest(
 						pathname,
 						route,
 						segments,
-						pattern: getPattern(segments, config, config.trailingSlash),
+						pattern: getPattern(segments, config.base, config.trailingSlash),
 						type: 'fallback',
 					});
 				}
@@ -862,7 +763,7 @@ export function createRouteManifest(
 									route,
 									segments,
 									generate,
-									pattern: getPattern(segments, config, config.trailingSlash),
+									pattern: getPattern(segments, config.base, config.trailingSlash),
 									type: 'fallback',
 									fallbackRoutes: [],
 								};
@@ -886,4 +787,12 @@ function computeRoutePriority(config: AstroConfig): RoutePriorityOverride {
 		return 'normal';
 	}
 	return 'legacy';
+}
+
+function joinSegments(segments: RoutePart[][]): string {
+	const arr = segments.map((segment) => {
+		return segment.map((rp) => (rp.dynamic ? `[${rp.content}]` : rp.content)).join('');
+	});
+
+	return `/${arr.join('/')}`.toLowerCase();
 }

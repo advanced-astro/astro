@@ -1,4 +1,4 @@
-import { getIconElement, isDefinedIcon, type Icon } from './icons.js';
+import { type Icon, getIconElement, isDefinedIcon } from './icons.js';
 
 export interface DevToolbarTooltipSection {
 	title?: string;
@@ -138,7 +138,11 @@ export class DevToolbarTooltip extends HTMLElement {
 						: ''
 				}
 				${section.content ? `<div class="section-content">${section.content}</div>` : ''}
-				${section.clickDescription ? `<span class="modal-cta">${section.clickDescription}</span>` : ''}
+				${
+					section.clickDescription
+						? `<span class="modal-cta">${section.clickDescription}</span>`
+						: ''
+				}
 			`;
 			fragment.append(sectionElement);
 

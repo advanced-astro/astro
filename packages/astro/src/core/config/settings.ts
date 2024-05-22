@@ -1,6 +1,6 @@
-import yaml from 'js-yaml';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import yaml from 'js-yaml';
 import type { AstroConfig, AstroSettings } from '../../@types/astro.js';
 import { getContentPaths } from '../../content/index.js';
 import createPreferences from '../../preferences/index.js';
@@ -104,6 +104,7 @@ export function createBaseSettings(config: AstroConfig): AstroSettings {
 		watchFiles: [],
 		devToolbarApps: [],
 		timer: new AstroTimer(),
+		latestAstroVersion: undefined, // Will be set later if applicable when the dev server starts
 	};
 }
 

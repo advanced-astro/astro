@@ -53,11 +53,33 @@ function getChildren(childString, experimentalReactChildren) {
 	}
 }
 
+// Keep a map of roots so we can reuse them on re-renders
+let rootMap = new WeakMap();
+const getOrCreateRoot = (element, creator) => {
+	let root = rootMap.get(element);
+	if (!root) {
+		root = creator();
+		rootMap.set(element, root);
+	}
+	return root;
+};
+
 export default (element) =>
 	(Component, props, { default: children, ...slotted }, { client }) => {
 		if (!element.hasAttribute('ssr')) return;
+
+		const actionKey = element.getAttribute('data-action-key');
+		const actionName = element.getAttribute('data-action-name');
+		const stringifiedActionResult = element.getAttribute('data-action-result');
+
+		const formState =
+			actionKey && actionName && stringifiedActionResult
+				? [JSON.parse(stringifiedActionResult), actionKey, actionName]
+				: undefined;
+
 		const renderOptions = {
 			identifierPrefix: element.getAttribute('prefix'),
+			formState,
 		};
 		for (const [key, value] of Object.entries(slotted)) {
 			props[key] = createElement(StaticHtml, { value, name: key });
@@ -75,14 +97,20 @@ export default (element) =>
 		}
 		if (client === 'only') {
 			return startTransition(() => {
-				const root = createRoot(element);
+				const root = getOrCreateRoot(element, () => {
+					const r = createRoot(element);
+					element.addEventListener('astro:unmount', () => r.unmount(), { once: true });
+					return r;
+				});
 				root.render(componentEl);
-				element.addEventListener('astro:unmount', () => root.unmount(), { once: true });
 			});
 		}
 		startTransition(() => {
-			const root = hydrateRoot(element, componentEl, renderOptions);
+			const root = getOrCreateRoot(element, () => {
+				const r = hydrateRoot(element, componentEl, renderOptions);
+				element.addEventListener('astro:unmount', () => r.unmount(), { once: true });
+				return r;
+			});
 			root.render(componentEl);
-			element.addEventListener('astro:unmount', () => root.unmount(), { once: true });
 		});
 	};

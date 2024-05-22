@@ -1,15 +1,14 @@
-import glob from 'fast-glob';
 import nodeFs from 'node:fs';
 import { extname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import glob from 'fast-glob';
 import pLimit from 'p-limit';
 import { type Plugin } from 'vite';
 import type { AstroSettings } from '../@types/astro.js';
 import { encodeName } from '../core/build/util.js';
 import { AstroError, AstroErrorData } from '../core/errors/index.js';
 import { appendForwardSlash, removeFileExtension } from '../core/path.js';
-import { rootRelativePath } from '../core/util.js';
-import { isServerLikeOutput } from '../prerender/utils.js';
+import { isServerLikeOutput, rootRelativePath } from '../core/util.js';
 import type { AstroPluginMetadata } from '../vite-plugin-astro/index.js';
 import {
 	CONTENT_FLAG,
@@ -19,6 +18,7 @@ import {
 	VIRTUAL_MODULE_ID,
 } from './consts.js';
 import {
+	type ContentLookupMap,
 	getContentEntryIdAndSlug,
 	getContentPaths,
 	getDataEntryExts,
@@ -28,7 +28,6 @@ import {
 	getEntrySlug,
 	getEntryType,
 	getExtGlob,
-	type ContentLookupMap,
 } from './utils.js';
 
 interface AstroContentVirtualModPluginParams {
@@ -234,7 +233,7 @@ export async function generateLookupMap({
 	);
 
 	// Run 10 at a time to prevent `await getEntrySlug` from accessing the filesystem all at once.
-	// Each await shouldn't take too long for the work to be noticably slow too.
+	// Each await shouldn't take too long for the work to be noticeably slow too.
 	const limit = pLimit(10);
 	const promises: Promise<void>[] = [];
 
@@ -279,7 +278,7 @@ export async function generateLookupMap({
 							message: AstroErrorData.DuplicateContentEntrySlugError.message(
 								collection,
 								slug,
-								lookupMap[collection]!.entries[slug],
+								lookupMap[collection].entries[slug],
 								rootRelativePath(root, filePath)
 							),
 							hint:

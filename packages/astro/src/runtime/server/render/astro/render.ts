@@ -1,10 +1,10 @@
 import type { RouteData, SSRResult } from '../../../../@types/astro.js';
 import { AstroError, AstroErrorData } from '../../../../core/errors/index.js';
-import { chunkToByteArray, chunkToString, encoder, type RenderDestination } from '../common.js';
+import { type RenderDestination, chunkToByteArray, chunkToString, encoder } from '../common.js';
+import { promiseWithResolvers } from '../util.js';
 import type { AstroComponentFactory } from './factory.js';
 import { isHeadAndContent } from './head-and-content.js';
 import { isRenderTemplateResult } from './render-template.js';
-import { promiseWithResolvers } from '../util.js';
 
 const DOCTYPE_EXP = /<!doctype html/i;
 
@@ -30,6 +30,10 @@ export async function renderToString(
 
 	let str = '';
 	let renderedFirstPageChunk = false;
+
+	if (isPage) {
+		await bufferHeadContent(result);
+	}
 
 	const destination: RenderDestination = {
 		write(chunk) {
@@ -125,6 +129,11 @@ export async function renderToReadableStream(
 				}
 			})();
 		},
+		cancel() {
+			// If the client disconnects,
+			// we signal to ignore the results of existing renders and avoid kicking off more of them.
+			result.cancelled = true;
+		},
 	});
 }
 
@@ -200,12 +209,23 @@ export async function renderToAsyncIterable(
 	let error: Error | null = null;
 	// The `next` is an object `{ promise, resolve, reject }` that we use to wait
 	// for chunks to be pushed into the buffer.
-	let next = promiseWithResolvers<void>();
+	let next: ReturnType<typeof promiseWithResolvers<void>> | null = null;
 	const buffer: Uint8Array[] = []; // []Uint8Array
+	let renderingComplete = false;
 
-	const iterator = {
+	const iterator: AsyncIterator<Uint8Array> = {
 		async next() {
-			await next.promise;
+			if (result.cancelled) return { done: true, value: undefined };
+
+			if (next !== null) {
+				await next.promise;
+			}
+
+			// Only create a new promise if rendering is still ongoing. Otherwise
+			// there will be a dangling promises that breaks tests (probably not an actual app)
+			if (!renderingComplete) {
+				next = promiseWithResolvers();
+			}
 
 			// If an error occurs during rendering, throw the error as we cannot proceed.
 			if (error) {
@@ -238,6 +258,12 @@ export async function renderToAsyncIterable(
 
 			return returnValue;
 		},
+		async return() {
+			// If the client disconnects,
+			// we signal to the rest of the internals to ignore the results of existing renders and avoid kicking off more of them.
+			result.cancelled = true;
+			return { done: true, value: undefined };
+		},
 	};
 
 	const destination: RenderDestination = {
@@ -259,8 +285,7 @@ export async function renderToAsyncIterable(
 				// Push the chunks into the buffer and resolve the promise so that next()
 				// will run.
 				buffer.push(bytes);
-				next.resolve();
-				next = promiseWithResolvers<void>();
+				next?.resolve();
 			}
 		},
 	};
@@ -269,12 +294,14 @@ export async function renderToAsyncIterable(
 	renderPromise
 		.then(() => {
 			// Once rendering is complete, calling resolve() allows the iterator to finish running.
-			next.resolve();
+			renderingComplete = true;
+			next?.resolve();
 		})
 		.catch((err) => {
 			// If an error occurs, save it in the scope so that we throw it when next() is called.
 			error = err;
-			next.resolve();
+			renderingComplete = true;
+			next?.resolve();
 		});
 
 	// This is the Iterator protocol, an object with a `Symbol.asyncIterator`

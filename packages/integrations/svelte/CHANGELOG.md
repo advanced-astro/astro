@@ -1,5 +1,31 @@
 # @astrojs/svelte
 
+## 5.4.0
+
+### Minor Changes
+
+- [#10689](https://github.com/withastro/astro/pull/10689) [`683d51a5eecafbbfbfed3910a3f1fbf0b3531b99`](https://github.com/withastro/astro/commit/683d51a5eecafbbfbfed3910a3f1fbf0b3531b99) Thanks [@ematipico](https://github.com/ematipico)! - Deprecate support for versions of Node.js older than `v18.17.1` for Node.js 18, older than `v20.0.3` for Node.js 20, and the complete Node.js v19 release line.
+
+  This change is in line with Astro's [Node.js support policy](https://docs.astro.build/en/upgrade-astro/#support).
+
+## 5.3.0
+
+### Minor Changes
+
+- [#10645](https://github.com/withastro/astro/pull/10645) [`51112ab3f1b134740e8307743bbb15cb0d8bdbb3`](https://github.com/withastro/astro/commit/51112ab3f1b134740e8307743bbb15cb0d8bdbb3) Thanks [@mingjunlu](https://github.com/mingjunlu)! - Bumps Svelte 5 peer dependency to `^5.0.0-next.90` and support its latest breaking changes
+
+## 5.2.0
+
+### Minor Changes
+
+- [#10244](https://github.com/withastro/astro/pull/10244) [`dbb0d0bd2833bf02d0aa70f87973c62ca1d58c1b`](https://github.com/withastro/astro/commit/dbb0d0bd2833bf02d0aa70f87973c62ca1d58c1b) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Adds TypeScript as a required peer dependency as it is required for Svelte's editor tooling to work correctly.
+
+## 5.1.0
+
+### Minor Changes
+
+- [#10224](https://github.com/withastro/astro/pull/10224) [`84502b41907316431c911f6f2ab9d432c7327065`](https://github.com/withastro/astro/commit/84502b41907316431c911f6f2ab9d432c7327065) Thanks [@mwc](https://github.com/mwc)! - Bumps Svelte 5 peer dependency to `^5.0.0-next.56` and support its latest breaking changes
+
 ## 5.0.3
 
 ### Patch Changes

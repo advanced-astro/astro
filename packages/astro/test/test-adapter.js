@@ -52,7 +52,11 @@ export default function (
 														return new Response(data);
 													}
 
-													${provideAddress ? `request[Symbol.for('astro.clientAddress')] = '0.0.0.0';` : ''}
+													${
+														provideAddress
+															? `request[Symbol.for('astro.clientAddress')] = '0.0.0.0';`
+															: ''
+													}
 													return super.render(request, routeData, locals);
 												}
 											}
@@ -77,7 +81,9 @@ export default function (
 					name: 'my-ssr-adapter',
 					serverEntrypoint: '@my-ssr',
 					exports: ['manifest', 'createApp'],
-					supportedAstroFeatures: {},
+					supportedAstroFeatures: {
+						serverOutput: 'stable',
+					},
 					...extendAdapter,
 				});
 			},

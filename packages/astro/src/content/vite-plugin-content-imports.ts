@@ -1,7 +1,7 @@
-import * as devalue from 'devalue';
 import type fsMod from 'node:fs';
 import { extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import * as devalue from 'devalue';
 import type { PluginContext } from 'rollup';
 import type { Plugin } from 'vite';
 import type {
@@ -15,9 +15,10 @@ import type {
 import { getProxyCode } from '../assets/utils/proxy.js';
 import { AstroError } from '../core/errors/errors.js';
 import { AstroErrorData } from '../core/errors/index.js';
-import { isServerLikeOutput } from '../prerender/utils.js';
+import { isServerLikeOutput } from '../core/util.js';
 import { CONTENT_FLAG, DATA_FLAG } from './consts.js';
 import {
+	type ContentConfig,
 	getContentEntryExts,
 	getContentEntryIdAndSlug,
 	getContentPaths,
@@ -31,7 +32,6 @@ import {
 	hasContentFlag,
 	parseEntrySlug,
 	reloadContentConfigObserver,
-	type ContentConfig,
 } from './utils.js';
 
 function getContentRendererByViteId(
@@ -74,10 +74,14 @@ export function astroContentImportPlugin({
 	const contentEntryConfigByExt = getEntryConfigByExtMap(settings.contentEntryTypes);
 	const dataEntryConfigByExt = getEntryConfigByExtMap(settings.dataEntryTypes);
 	const { contentDir } = contentPaths;
+	let shouldEmitFile = false;
 
 	const plugins: Plugin[] = [
 		{
 			name: 'astro:content-imports',
+			config(_config, env) {
+				shouldEmitFile = env.command === 'build';
+			},
 			async transform(_, viteId) {
 				if (hasContentFlag(viteId, DATA_FLAG)) {
 					const fileId = viteId.split('?')[0] ?? viteId;
@@ -90,6 +94,7 @@ export function astroContentImportPlugin({
 						config: settings.config,
 						fs,
 						pluginContext: this,
+						shouldEmitFile,
 					});
 
 					const code = `
@@ -112,6 +117,7 @@ export const _internal = {
 						config: settings.config,
 						fs,
 						pluginContext: this,
+						shouldEmitFile,
 					});
 
 					const code = `
@@ -190,6 +196,7 @@ type GetEntryModuleParams<TEntryType extends ContentEntryType | DataEntryType> =
 	pluginContext: PluginContext;
 	entryConfigByExt: Map<string, TEntryType>;
 	config: AstroConfig;
+	shouldEmitFile: boolean;
 };
 
 async function getContentEntryModule(
@@ -222,6 +229,7 @@ async function getContentEntryModule(
 		? await getEntryData(
 				{ id, collection, _internal, unvalidatedData },
 				collectionConfig,
+				params.shouldEmitFile,
 				pluginContext
 			)
 		: unvalidatedData;
@@ -256,6 +264,7 @@ async function getDataEntryModule(
 		? await getEntryData(
 				{ id, collection, _internal, unvalidatedData },
 				collectionConfig,
+				params.shouldEmitFile,
 				pluginContext
 			)
 		: unvalidatedData;

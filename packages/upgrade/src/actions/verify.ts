@@ -1,9 +1,9 @@
 import type { Context, PackageInfo } from './context.js';
 
-import { color } from '@astrojs/cli-kit';
 import dns from 'node:dns/promises';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { color } from '@astrojs/cli-kit';
 import semverCoerce from 'semver/functions/coerce.js';
 import semverDiff from 'semver/functions/diff.js';
 import semverParse from 'semver/functions/parse.js';
@@ -177,7 +177,7 @@ async function resolveTargetVersion(packageInfo: PackageInfo, registry: string):
 		packageInfo.changelogTitle = 'CHANGELOG';
 	} else {
 		// Dependency updates should not include the specific dist-tag
-		// since they are just for compatability
+		// since they are just for compatibility
 		packageInfo.tag = undefined;
 	}
 }
